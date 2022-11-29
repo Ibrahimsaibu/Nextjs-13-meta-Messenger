@@ -5,17 +5,23 @@ import useSWR from "swr";
 import { v4 as uuid } from "uuid";
 import { Message } from "../types";
 import fetcher from "../utils/fetchMessages";
+import { unstable_getServerSession } from "next-auth";
 
-export const ChatInput = () => {
+type Props = {
+  session: Awaited<ReturnType<typeof unstable_getServerSession>>;
+};
+
+export const ChatInput = ({ session }: Props) => {
   const [input, setInput] = useState("");
   const { data: messages, error, mutate } = useSWR("/api/getMessages", fetcher);
 
-  
+  console.log("session ==>", session);
+
   //refactor later
   const addMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!input) return;
+    if (!input || !session) return;
 
     const messageToSend = input;
     setInput("");
@@ -27,10 +33,9 @@ export const ChatInput = () => {
       id,
       message: messageToSend,
       created_at: Date.now(),
-      username: "Ibrahim Saibu",
-      profilePic:
-        "https://scontent.flos2-1.fna.fbcdn.net/v/t1.6435-9/97975051_10207053928183419_3615170893275201536_n.jpg?_nc_cat=110&ccb=1-7&_nc_sid=09cbfe&_nc_ohc=G8EQl8p8KDkAX94rlBJ&_nc_ht=scontent.flos2-1.fna&oh=00_AfBE9oyIfZHEO0tZ8tcO1mF-cLIyaIZgCx5nXPeyLwFCuw&oe=63988202",
-      email: "ibrahimsaibu2010@gmail.com",
+      username: session.user?.name!,
+      profilePic: session.user?.image!,
+      email: session.user?.email!,
     };
     //api call
     const uploadMessageToUpstash = async () => {
@@ -55,11 +60,12 @@ export const ChatInput = () => {
   return (
     <form
       onSubmit={addMessage}
-      className="fixed bottom-0 w-full  z-50 px-10 py-5 space-x-2 border-t border-gray-100 flex"
+      className="fixed bottom-0 w-full  z-50 px-10 py-5 space-x-2 border-t border-gray-100 flex bg-white"
     >
       <input
         type="text"
         value={input}
+        disabled={!session}
         onChange={(e) => setInput(e.target.value)}
         placeholder="Enter message here..."
         className="flex-1 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent px-5 py-3 disabled:opacity-50 disabled:cursor-not-allowed"

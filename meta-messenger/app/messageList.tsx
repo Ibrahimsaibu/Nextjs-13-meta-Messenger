@@ -1,15 +1,43 @@
 "use client";
 
+import { useEffect } from "react";
 import useSWR from "swr";
+import { clientPusher } from "../pusher";
 import { Message } from "../types";
 import fetcher from "../utils/fetchMessages";
 import { MessageComponent } from "./messageComponent";
 
-export const MessageList = () => {
+type MessagesProsp = {
+  initialMessages: Message[];
+};
+
+export const MessageList = ({ initialMessages }: MessagesProsp) => {
   const { data: messages, error, mutate } = useSWR("/api/getMessages", fetcher);
+
+  useEffect(() => {
+    const channel = clientPusher.subscribe("messages");
+
+    channel.bind("new-message", async (data: Message) => {
+      if (messages?.find((message) => message.id === data.id)) return;
+
+      if (!messages) {
+        mutate(fetcher);
+      } else {
+        mutate(fetcher, {
+          optimisticData: [data, ...messages!],
+          rollbackOnError: true,
+        });
+      }
+    });
+    return () => {
+      channel.unbind_all();
+      channel.unsubscribe();
+    };
+  }, [clientPusher, messages, mutate]);
+
   return (
-    <div>
-      {messages?.map((message) => {
+    <div className="space-y-5 px-5 pt-8 pb-32 max-w-2xl xl:max-w-4xl mx-auto ">
+      {(messages || initialMessages).map((message) => {
         return <MessageComponent key={message.id} message={message} />;
       })}
     </div>

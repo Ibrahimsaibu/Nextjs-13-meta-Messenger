@@ -1,6 +1,8 @@
 import Redis from 'ioredis';
+const redisUrl = process.env.NEXT_PUBLIC_REDIS_URL!
+const redis = new Redis(redisUrl)
 
-const redis = new Redis(process.env.REDIS_URL!)
+
 
 export default redis
 
